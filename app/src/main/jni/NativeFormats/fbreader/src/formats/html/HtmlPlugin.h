@@ -22,6 +22,7 @@
 
 #include "../FormatPlugin.h"
 
+//TODO jostein
 class HtmlPlugin : public FormatPlugin {
 
 public:
