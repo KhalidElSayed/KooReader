@@ -191,6 +191,7 @@ bool ZLXMLReader::readDecDocument(shared_ptr<ZLInputStream> stream) {
     std::size_t length;
     do {
             length = stream->read(myParserBuffer, BUFFER_SIZE);
+            /*
             if(bstart==false)
             {
                 char* strstart=strstr(myParserBuffer,"<body>");
@@ -216,6 +217,9 @@ bool ZLXMLReader::readDecDocument(shared_ptr<ZLInputStream> stream) {
                   plen+=length;
                }
             }
+            */
+            memcpy(pdata+plen,myParserBuffer,length);
+            plen+=length;
     } while ((length == BUFFER_SIZE) && !myInterrupted);
 
     char* strbody=new char[plen+1];
