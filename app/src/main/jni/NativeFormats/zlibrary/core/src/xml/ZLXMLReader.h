@@ -95,6 +95,9 @@ public:
 
 	bool readDocument(const ZLFile &file);
 	bool readDocument(shared_ptr<ZLInputStream> stream);
+	
+	bool readDecDocument(shared_ptr<ZLInputStream> stream);
+	bool aes_decrypt(char* in, int inlen,char* key, char* out);
 	bool readDocument(shared_ptr<ZLAsynchronousInputStream> stream);
 
 	const std::string &errorMessage() const;
@@ -105,6 +108,7 @@ public:
 	const char *attributeValue(const char **xmlattributes, const char *name) const;
 	const char *attributeValue(const char **xmlattributes, const NamePredicate &predicate) const;
 	std::map<std::string,std::string> attributeMap(const char **xmlattributes) const;
+	size_t Base64_Decode(char *pDest, const char *pSrc, size_t srclen);
 
 private:
 	void initialize(const char *encoding = 0);
@@ -131,6 +135,10 @@ private:
 	bool myInterrupted;
 	ZLXMLReaderInternal *myInternalReader;
 	char *myParserBuffer;
+	
+	char *myParserDecBuffer;
+	char *straeskey;
+	
 	std::vector<shared_ptr<nsMap> > myNamespaces;
 
 	std::string myErrorMessage;

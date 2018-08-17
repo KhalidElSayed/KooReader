@@ -29,10 +29,30 @@ include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 
+LOCAL_MODULE := libssl_static
+
+LOCAL_SRC_FILES := openssl/libs/$(TARGET_ARCH_ABI)/libssl.a
+
+include $(PREBUILT_STATIC_LIBRARY)
+
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libcrypto_static
+
+LOCAL_SRC_FILES := openssl/libs/$(TARGET_ARCH_ABI)/libcrypto.a
+
+include $(PREBUILT_STATIC_LIBRARY)
+
+
+include $(CLEAR_VARS)
+
 LOCAL_MODULE                  := NativeFormats-v4
 LOCAL_CFLAGS                  := -Wall
-LOCAL_LDLIBS                  := -lz -llog
+LOCAL_LDLIBS                  := -lz -llog 
 LOCAL_STATIC_LIBRARIES        := expat
+LOCAL_STATIC_LIBRARIES        += libssl_static
+LOCAL_STATIC_LIBRARIES        += libcrypto_static
 
 LOCAL_SRC_FILES               := \
 	NativeFormats/main.cpp \
@@ -187,6 +207,7 @@ LOCAL_C_INCLUDES              := \
 	$(LOCAL_PATH)/NativeFormats/zlibrary/core/src/util \
 	$(LOCAL_PATH)/NativeFormats/zlibrary/core/src/xml \
 	$(LOCAL_PATH)/NativeFormats/zlibrary/text/src/model \
-	$(LOCAL_PATH)/NativeFormats/zlibrary/text/src/fonts
+	$(LOCAL_PATH)/NativeFormats/zlibrary/text/src/fonts \
+        $(LOCAL_PATH)/openssl/include
 
 include $(BUILD_SHARED_LIBRARY)

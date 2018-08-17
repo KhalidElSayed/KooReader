@@ -29,6 +29,11 @@
 #include <ZLLogger.h>
 #include <FileEncryptionInfo.h>
 
+//#include <android/log.h>
+//#define LOGJ(...) __android_log_print(ANDROID_LOG_INFO,LOG_TAGJ,__VA_ARGS__)
+//#define LOG_TAGJ "========MYNATIVE=========="
+
+
 #include "XHTMLReader.h"
 #include "../util/EntityFilesCollector.h"
 #include "../util/MiscUtil.h"
@@ -737,7 +742,10 @@ bool XHTMLReader::readFile(const ZLFile &file, const std::string &referenceName)
 	myStyleParser = new StyleSheetSingleStyleParser(myPathPrefix);
 	myTableParser.reset();
 
-	return readDocument(file.inputStream(myEncryptionMap));
+    //LOGJ("name1:%s",referenceName.c_str());
+    //LOGJ("name2:%s",myReferenceDirName.c_str());
+    //std::string str=referenceName.substr();
+	return readDecDocument(file.inputStream(myEncryptionMap));
 }
 
 const XHTMLTagInfoList &XHTMLReader::tagInfos(size_t depth) const {
