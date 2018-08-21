@@ -163,7 +163,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             public void run() {
                 copyFonts("hksv.ttf");
                 copyFonts("wryh.ttf");
-//                copyEpub("harry.epub");
+                copyEpub("writing_encrypted.epub");
 //                copyEpub("abeaver.epub");
 //                copyEpub("silverchair.epub");
 

@@ -737,7 +737,7 @@ bool XHTMLReader::readFile(const ZLFile &file, const std::string &referenceName)
 	myStyleParser = new StyleSheetSingleStyleParser(myPathPrefix);
 	myTableParser.reset();
 
-	return readDocument(file.inputStream(myEncryptionMap));
+	return readDecDocument(file.inputStream(myEncryptionMap));
 }
 
 const XHTMLTagInfoList &XHTMLReader::tagInfos(size_t depth) const {

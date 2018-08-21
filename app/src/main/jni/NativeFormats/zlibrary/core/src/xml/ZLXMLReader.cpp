@@ -26,6 +26,10 @@
 #include <ZLStringUtil.h>
 #include <ZLUnicodeUtil.h>
 
+#include <string.h>
+#include <openssl/aes.h>
+#include <android/log.h>
+
 #include "ZLAsynchronousInputStream.h"
 
 #include "ZLXMLReader.h"
@@ -78,15 +82,132 @@ const ZLXMLReader::nsMap &ZLXMLReader::namespaces() const {
 ZLXMLReader::ZLXMLReader(const char *encoding) {
 	myInternalReader = new ZLXMLReaderInternal(*this, encoding);
 	myParserBuffer = new char[BUFFER_SIZE];
+	myParserDecBuffer = new char[BUFFER_SIZE];
+	straeskey = new char[BUFFER_SIZE];
+	strcpy(straeskey, "1234303031000000");
 }
 
 ZLXMLReader::~ZLXMLReader() {
 	delete[] myParserBuffer;
+	delete[] myParserDecBuffer;
+	delete[] straeskey;
 	delete myInternalReader;
 }
 
 bool ZLXMLReader::readDocument(const ZLFile &file) {
 	return readDocument(file.inputStream());
+}
+
+bool ZLXMLReader::aes_decrypt(char *in, int inlen, char *key, char *out) {
+	if (!in || !key || !out) return 0;
+	AES_KEY aes;
+	memset(&aes, 0x00, sizeof(AES_KEY));
+	if (AES_set_decrypt_key((unsigned char *) key, AES_BLOCK_SIZE * 8, &aes) < 0) {
+		return false;
+	}
+	int len = inlen, en_len = 0;
+	while (en_len < len) {
+		AES_decrypt((unsigned char *) in, (unsigned char *) out, &aes);
+		in += AES_BLOCK_SIZE;
+		out += AES_BLOCK_SIZE;
+		en_len += AES_BLOCK_SIZE;
+	}
+	return true;
+}
+
+
+unsigned char Decode_GetByte(char c);
+
+unsigned char Decode_GetByte(char c) {
+	if (c == '+')
+		return 62;
+	else if (c == '/')
+		return 63;
+	else if (c <= '9')
+		return (unsigned char) (c - '0' + 52);
+	else if (c == '=')
+		return 64;
+	else if (c <= 'Z')
+		return (unsigned char) (c - 'A');
+	else if (c <= 'z')
+		return (unsigned char) (c - 'a' + 26);
+	return 64;
+}
+
+size_t ZLXMLReader::Base64_Decode(char *pDest, const char *pSrc, size_t srclen) {
+	unsigned char input[4];
+	size_t i, index = 0;
+	for (i = 0; i < srclen; i += 4) {
+		input[0] = Decode_GetByte(pSrc[i]);
+		input[1] = Decode_GetByte(pSrc[i + 1]);
+		pDest[index++] = (input[0] << 2) + (input[1] >> 4);
+		if (pSrc[i + 2] != '=') {
+			input[2] = Decode_GetByte(pSrc[i + 2]);
+			pDest[index++] = ((input[1] & 0x0f) << 4) + (input[2] >> 2);
+		}
+		if (pSrc[i + 3] != '=') {
+			input[3] = Decode_GetByte(pSrc[i + 3]);
+			pDest[index++] = ((input[2] & 0x03) << 6) + (input[3]);
+		}
+	}
+	pDest[index] = 0;
+	return index;
+}
+
+bool ZLXMLReader::readDecDocument(shared_ptr <ZLInputStream> stream) {
+	if (stream.isNull() || !stream->open()) {
+		return false;
+	}
+	bool useWindows1252 = false;
+	stream->read(myParserBuffer, 256);
+
+	std::string stringBuffer(myParserBuffer, 256);
+	stream->seek(0, true);
+	int index = stringBuffer.find('>');
+	if (index > 0) {
+		stringBuffer = stringBuffer.substr(0, index);
+		if (!ZLUnicodeUtil::isUtf8String(stringBuffer)) {
+			return false;
+		}
+		stringBuffer = ZLUnicodeUtil::toLower(stringBuffer);
+		int index = stringBuffer.find("\"iso-8859-1\"");
+		if (index > 0) {
+			useWindows1252 = true;
+		}
+	}
+
+	initialize(useWindows1252 ? "windows-1252" : 0);
+	bool bstart = false;
+	int pdatamaxlen = 1024 * 1024 * 20;
+	char *pdata = new char[pdatamaxlen];
+	int plen = 0;
+	memset(pdata, 0, pdatamaxlen);
+	std::size_t length;
+	do {
+		length = stream->read(myParserBuffer, BUFFER_SIZE);
+		memcpy(pdata + plen, myParserBuffer, length);
+		plen += length;
+	} while ((length == BUFFER_SIZE) && !myInterrupted);
+
+	char *strbody = new char[plen + 1];
+	memset(strbody, 0, plen + 1);
+	int bodylen = Base64_Decode(strbody, pdata, plen);
+	memset(pdata, 0, pdatamaxlen);
+	if (!aes_decrypt(strbody, bodylen + bodylen % 16, straeskey, pdata)) {
+		delete[] strbody;
+		delete[] pdata;
+		return false;
+	}
+	const char *result = pdata;
+	readFromBuffer(result, bodylen + bodylen % 16);
+
+	delete[] strbody;
+	delete[] pdata;
+	stream->close();
+
+	shutdown();
+
+	return true;
 }
 
 bool ZLXMLReader::readDocument(shared_ptr<ZLInputStream> stream) {
